@@ -4,7 +4,7 @@ import {LoanDecisionPage} from "../src/loan-decision.page";
 import {IncomePage} from "../src/income.page";
 import {DecisionPage} from "../src/decision.page";
 
-test.only('small loan e2e flow', async ({ page }) => {
+test('small loan e2e flow', async ({ page }) => {
 
   // the app default state
 
