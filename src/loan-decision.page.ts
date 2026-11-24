@@ -1,4 +1,5 @@
 import {Page, Locator} from "@playwright/test";
+import {SmallLoanPage} from "./small-loan.page";
 
 export class LoanDecisionPage {
 
@@ -16,6 +17,22 @@ export class LoanDecisionPage {
         this.monthlyPaymentText = loanDecisionPage.getByTestId('final-page-monthly-payment');
         this.loanPeriodText = loanDecisionPage.getByTestId('final-page-period');
         this.loanContinueButton = loanDecisionPage.getByTestId('final-page-continue-button');
+    }
+
+    async openLoanDecisionPage(page: Page) {
+
+        const smallLoanPage = new SmallLoanPage(page)
+
+        await smallLoanPage.openSmallLoanPage()
+        await smallLoanPage.clickCalculateButton();
+        await smallLoanPage.clickApplyButton();
+        await smallLoanPage.clickUserNamePasswordButton()
+        await smallLoanPage.inputUserName('anna');
+        await smallLoanPage.inputUserPassword('Tallinn1');
+        await smallLoanPage.clickLoginContinueButton();
+
+        return page
+
     }
 
     async clickLoanContinueButton() {

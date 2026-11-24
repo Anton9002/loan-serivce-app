@@ -1,11 +1,14 @@
 import {Page, Locator} from "@playwright/test";
+import {LoanDecisionPage} from "./loan-decision.page";
 
 export class SmallLoanPage {
 
     readonly smallLoanPage: Page;
     readonly smallLoanCalculateText: Locator;
     readonly calculateButton: Locator
+    readonly monthlyPaymentText: Locator
     readonly amountInput: Locator
+    readonly calculateErrorText: Locator
     readonly applyButton: Locator
     readonly applyForLoanButton: Locator
     readonly userNameInput: Locator
@@ -19,7 +22,9 @@ export class SmallLoanPage {
         this.smallLoanPage = smallLoanPage;
         this.smallLoanCalculateText = smallLoanPage.getByTestId('id-small-loan-calculator-title');
         this.calculateButton = smallLoanPage.getByTestId('id-small-loan-calculator-field-calculate');
+        this.monthlyPaymentText = smallLoanPage.getByTestId('ib-small-loan-calculator-field-monthlyPayment')
         this.amountInput = smallLoanPage.getByTestId('id-small-loan-calculator-field-amount');
+        this.calculateErrorText = smallLoanPage.getByTestId('id-small-loan-calculator-field-error');
         this.applyButton = smallLoanPage.getByTestId('id-small-loan-calculator-field-apply');
         this.applyForLoanButton = smallLoanPage.getByTestId('id-image-element-button-image-1');
         this.userNameInput = smallLoanPage.getByTestId('login-popup-username-input');
@@ -46,6 +51,12 @@ export class SmallLoanPage {
     async clickApplyForLoanButton() {
 
        await this.applyForLoanButton.click();
+
+    }
+
+    async inputAmount(amount: string) {
+
+        await this.amountInput.fill(amount)
 
     }
 
@@ -88,6 +99,20 @@ export class SmallLoanPage {
     async clickLoginContinueButton() {
 
         await this.loginContinueButton.click();
+
+    }
+
+    async openLoanDecisionPage() {
+
+        await this.openSmallLoanPage()
+        await this.clickCalculateButton();
+        await this.clickApplyButton();
+        await this.clickUserNamePasswordButton()
+        await this.inputUserName('anna');
+        await this.inputUserPassword('Tallinn1');
+        await this.clickLoginContinueButton();
+
+        return new LoanDecisionPage(this.smallLoanPage)
 
     }
 
