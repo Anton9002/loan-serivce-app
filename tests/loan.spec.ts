@@ -71,7 +71,10 @@ test('small loan e2e flow', async ({ page }) => {
   const decisionPage = new DecisionPage(page)
 
   await expect(decisionPage.decisionApprovedIcon).toBeVisible();
-  await expect(decisionPage.decisionApprovedText).toBeVisible();
+  await expect(decisionPage.decisionTitle).toBeVisible();
+  await expect(decisionPage.decisionTitle).toContainText('Loan approved!');
+  await expect(decisionPage.decisionText).toBeVisible();
+  await expect(decisionPage.decisionText).toContainText('Your income is sufficient for this loan. We will contact you shortly.');
 
   await decisionPage.clickDecisionPageButton();
 
@@ -79,3 +82,161 @@ test('small loan e2e flow', async ({ page }) => {
   await expect(smallLoanPage.smallLoanCalculateText).toBeVisible();
 
 });
+
+test('calculate > apply button enabled > request happened', async ({ page }) => {
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  await smallLoanPage.openSmallLoanPage();
+
+  const requestPromise = page.waitForRequest('**/api/loan-calc?amount=500&period=12');
+
+  await smallLoanPage.clickCalculateButton();
+
+  await requestPromise;
+
+  await expect(smallLoanPage.applyButton).toBeEnabled();
+
+  await smallLoanPage.inputAmount('1000');
+
+  const request1KPromise = page.waitForRequest('**/api/loan-calc?amount=1000&period=12');
+
+  await smallLoanPage.clickCalculateButton();
+
+  await request1KPromise;
+
+});
+
+test('default state > calculate with mocked backend > monthly payment shown', async ({ page }) => {
+  // mock backend response before navigation
+  await page.route('**/api/loan-calc?amount=500&period=12', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ paymentAmountMonthly: 34.56 }),
+    })
+  })
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  await smallLoanPage.openSmallLoanPage();
+  await smallLoanPage.clickCalculateButton();
+
+  // mocked value is displayed
+  await expect(smallLoanPage.monthlyPaymentText).toContainText('34.56')
+});
+
+test('calculation fails with an invalid amount and mocked backend > error is visible', async ({ page }) => {
+  // mock backend response before navigation
+  await page.route('**/api/loan-calc?amount=499&period=12', async (route) => {
+    await route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+
+    })
+  })
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  await smallLoanPage.openSmallLoanPage();
+  await smallLoanPage.inputAmount('499')
+  await smallLoanPage.clickCalculateButton();
+
+  // mocked value is displayed
+  await expect(smallLoanPage.calculateErrorText).toBeVisible()
+
+});
+
+test('default state > change amount to 1000 > calculate with mocked backend > monthly payment shown', async ({ page }) => {
+  // mock backend response before navigation
+  await page.route('**/api/loan-calc?amount=1000&period=12', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ paymentAmountMonthly: 65.78 }),
+    })
+  })
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  await smallLoanPage.openSmallLoanPage();
+  await smallLoanPage.clickCalculateButton();
+
+  // mocked value is displayed
+  await expect(smallLoanPage.monthlyPaymentText).toContainText('42.8')
+
+  await smallLoanPage.inputAmount('1000')
+  await smallLoanPage.clickCalculateButton();
+
+  await expect(smallLoanPage.monthlyPaymentText).toContainText('65.78')
+
+});
+
+test('default state > approved decision is shown', async ({ page }) => {
+  // mock backend response before navigation
+  await page.route('**/api/decisions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        approved: true,
+        reason: 'approved'
+      }),
+    })
+  })
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  const loanDecisionPage = await smallLoanPage.openLoanDecisionPage()
+
+  await loanDecisionPage.clickLoanContinueButton()
+
+  const incomePage = new IncomePage(page)
+
+  await incomePage.fillMonthlyIncomeInput('500')
+  await incomePage.clickIncomeGetDecisionButton()
+
+  const decisionPage = new DecisionPage(page)
+
+  await expect(decisionPage.decisionApprovedIcon).toBeVisible();
+  await expect(decisionPage.decisionTitle).toBeVisible();
+  await expect(decisionPage.decisionTitle).toContainText('Loan approved!');
+  await expect(decisionPage.decisionText).toBeVisible();
+  await expect(decisionPage.decisionText).toContainText('Your income is sufficient for this loan. We will contact you shortly.');
+
+});
+
+test('default state > declined decision is shown', async ({ page }) => {
+  // mock backend response before navigation
+  await page.route('**/api/decisions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        approved: false,
+        reason: 'insufficient_income'
+      }),
+    })
+  })
+
+  const smallLoanPage = new SmallLoanPage(page);
+
+  const loanDecisionPage = await smallLoanPage.openLoanDecisionPage()
+
+  await loanDecisionPage.clickLoanContinueButton()
+
+  const incomePage = new IncomePage(page)
+
+  await incomePage.fillMonthlyIncomeInput('1')
+  await incomePage.clickIncomeGetDecisionButton()
+
+  const decisionPage = new DecisionPage(page)
+
+  await expect(decisionPage.decisionDeclinedIcon).toBeVisible();
+  await expect(decisionPage.decisionTitle).toBeVisible();
+  await expect(decisionPage.decisionTitle).toContainText('Loan declined');
+  await expect(decisionPage.decisionText).toBeVisible();
+  await expect(decisionPage.decisionText).toContainText('The monthly payment is too high compared to your income. Try a smaller amount or a longer period.');
+
+});
+
